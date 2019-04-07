@@ -151,7 +151,6 @@ main = function(){
   Stock1 <- getStock(S1)
   Stock2 <- getStock(S2)
   
-  
   #View(Stock1)
   #View(Stock2)
   
