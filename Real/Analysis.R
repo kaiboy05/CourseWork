@@ -45,6 +45,45 @@ FilterStock <- function(stock, year = 2015:2018, month = 0){
   }
 }
 
+genTitleName = function(type, name, year, month, abb){
+  if(abb){
+    title = name
+    if(length(year) > 1){
+      title = paste(title, year[1], "-", year[length(year)])
+    }
+    else{
+      title = paste(title, year)
+    }
+    if(length(month > 1)){
+      title = paste(title, month.abb[month[1]], "-", month.abb[month[length(month)]])
+    }
+    else{
+      if(all(month >= 1) & all(month <= 12)){
+        title = paste(title, month.abb[month])
+      }
+    }
+  }
+  else{
+    if(length(month) > 1){
+      title = paste(type, "of the return of", name, "from", year, month.name[month[1]], 
+                    "to", year, month.name[month[length(month)]])
+    }
+    else{
+      if(all(month < 1) | all(month > 12)){
+        if(length(year) > 1){
+          title = paste(type, " of the return of", name, "from", year[1], "to", year[length(year)])
+        }
+        else{
+          title = paste(type, " of the return of", name, "in", year)
+        }
+      }
+      else{
+        title = paste(type, " of the return of", name, "in", year, month.name[month])
+      }
+    }
+  }
+}
+
 #Function that print summary statistics of years
 Stocksummary = function(stock, name){
   for(i in 2015:2018){
@@ -74,32 +113,15 @@ StocksummarySpecific = function(stock, name, year = 2015:2018, month = 0){
 }
 
 #Function that plot the return of stock of a year or month
-StockGraph = function(stock, name, year = 2015:2018, month = 0){
+StockGraph = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
   s <- FilterStock(stock, year, month)
-  title = ""
-  if(length(month) > 1){
-    title = paste("Return of", name, "from", year, month.name[month[1]], 
-                                    "to", year, month.name[month[length(month)]])
-  }
-  else{
-    if(month < 1 | month > 12){
-      if(length(year) > 1){
-        title = paste("Return of", name, "from", year[1], "to", year[length(year)])
-      }
-      else{
-        title = paste("Return of", name, "in", year)
-      }
-    }
-    else{
-      title = paste("Return of", name, "in", year, month.name[month])
-    }
-  }
+  title = genTitleName("Graph", name, year, month, abb)
   if(!pic){
     name = paste("fig", count, ".jpg", sep = "")
     jpeg(name)
   }
   plot(x = s$Date, y = s$`Return of the Day`, type = "l", col = "blue",
-        xlab = "Date", ylab = "Return ($)", main = title)
+        xlab = "Date", ylab = "Return (£)", main = title)
   lines(x = s$Date, y = rep(0, nrow(s)), col = "red")
   if(!pic){
     dev.off()
@@ -120,7 +142,7 @@ StockGraphCompareAllMonth = function(stock, name, year){
   if(pic){par(mfrow = c(4, 3))}
   for(i in year){
     for(j in 1:12){
-      StockGraph(stock, name, i, j)
+      StockGraph(stock, name, i, j, abb = TRUE)
     }
   }
 }
@@ -130,7 +152,7 @@ StockGraphCompareMonth = function(stock, name, year, month){
   if(pic){par(mfrow = c(2, 1))}
   for(i in year){
     for(j in month){
-      StockGraph(stock, name, i, j)
+      StockGraph(stock, name, i, j, abb = TRUE)
     }
   }
 }
@@ -139,8 +161,128 @@ StockGraphCompareMonth = function(stock, name, year, month){
 StockGraphCompareSeason = function(stock, name, year, month){
   if(pic){par(mfrow = c(2, 1))}
   for(i in year){
-    StockGraph(stock, name, i, month)
+    StockGraph(stock, name, i, month, abb = TRUE)
   }
+}
+
+#Function that show histogram of the return
+StockHist = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
+  s <- FilterStock(stock, year, month)
+  title = genTitleName("Histogram", name, year, month, abb)
+  if(month == 0){
+    nbreak = 50
+  }
+  else{
+    nbreak = 10 + length(month) * 3
+  }
+  if(!pic){
+    name = paste("fig", count, ".jpg", sep = "")
+    jpeg(name)
+  }
+  h <- hist(s$`Return of the Day`, breaks = nbreak, xlab = "Return (£)", main = title)
+  if(!pic){
+    dev.off()
+    count <<- count + 1
+  }
+  return(h)
+}
+
+StockHistCompareAllMonth = function(stock, name, year = 2015:2018){
+  if(pic){par(mfrow = c(4, 3))}
+  for(i in year){
+    for(j in 1:12){
+      StockHist(stock, name, i, j, TRUE)
+    }
+  }
+}
+
+#Function that show boxplot of the return
+StockBox = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
+  s <- FilterStock(stock, year, month)
+  title = genTitleName("Boxplot", name, year, month, abb)
+  if(!pic){
+    name = paste("fig", count, ".jpg", sep = "")
+    jpeg(name)
+  }
+  b <- boxplot(s$`Return of the Day`, ylab = "Return (£)", xlab = name, horizontal = TRUE, 
+               names = name, main = title, col = "orange", border = "brown", notch = TRUE)
+  if(!pic){
+    dev.off()
+    count <<- count + 1
+  }
+  return(b)
+}
+
+#Function that show boxplot compare of the return
+StockBoxCompare = function(stock1, name1, stock2, name2, year = 2015:2018, month = 0){
+  s <- FilterStock(stock1, year, month)
+  s1 <- FilterStock(stock2, year, month)
+  title = ""
+  if(length(month) > 1){
+    title = paste("Boxplot of the return of", name1, "and", name2, "from", year, month.name[month[1]], 
+                  "to", year, month.name[month[length(month)]])
+  }
+  else{
+    if(month < 1 | month > 12){
+      if(length(year) > 1){
+        title = paste("Boxplot of the return of", name1, "and", name2, "from", year[1], "to", year[length(year)])
+      }
+      else{
+        title = paste("Boxplot of the return of", name1, "and", name2, "in", year)
+      }
+    }
+    else{
+      title = paste("Boxplot of the return of", name1, "and", name2, "in", year, month.name[month])
+    }
+  }
+  if(!pic){
+    name = paste("fig", count, ".jpg", sep = "")
+    jpeg(name)
+  }
+  b <- boxplot(s$`Return of the Day`, s1$`Return of the Day`, ylab = "Return (£)", xlab = "Stock",
+               names = c(name1, name2), main = title, col = "orange", border = "brown", notch = TRUE)
+  if(!pic){
+    dev.off()
+    count <<- count + 1
+  }
+  return(b)
+}
+
+StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, month = 0, abb = FALSE){
+  s <- FilterStock(stock1, year, month)
+  s1 <- FilterStock(stock2, year, month)
+  lim = c(min(s$`Return of the Day`, s1$`Return of the Day`, na.rm = TRUE), 
+          max(s$`Return of the Day`, s1$`Return of the Day`, na.rm = TRUE))
+  title = ""
+  if(length(month) > 1){
+    title = paste("Scatter Plot comapre from", year, month.name[month[1]], 
+                  "to", year, month.name[month[length(month)]])
+    
+  }
+  else{
+    if(month < 1 | month > 12){
+      if(length(year) > 1){
+        title = paste("Scatter Plot comapre from", year[1], "to", year[length(year)])
+      }
+      else{
+        title = paste("Scatter Plot comapre in", year)
+      }
+    }
+    else{
+      title = paste("Scatter Plot comapre in", year, month.name[month])
+    }
+  }
+  if(!pic){
+    name = paste("fig", count, ".jpg", sep = "")
+    jpeg(name)
+  }
+  plot(s$`Return of the Day`, s1$`Return of the Day`, main = title, xlab = name1, ylab = name2,
+       pch = 19, xlim = lim, ylim = lim)
+  if(!pic){
+    dev.off()
+    count <<- count + 1
+  }
+  return(cor(na.omit(s$`Return of the Day`), na.omit(s1$`Return of the Day`)))
 }
 
 main = function(){
@@ -167,6 +309,6 @@ main = function(){
   Stocksummary(Stock2, S2)
 }
 
-main()
+#main()
 
 if(!pic){sink()}
