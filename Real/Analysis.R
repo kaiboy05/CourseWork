@@ -5,6 +5,8 @@
 ####################################################
 
 pic = TRUE
+reg = TRUE
+Isprint = FALSE
 par(mfrow = c(1, 1))
 count = 1
 
@@ -45,6 +47,7 @@ FilterStock <- function(stock, year = 2015:2018, month = 0){
   }
 }
 
+#Function that generate graph title
 genTitleName = function(type, name, year, month, abb){
   if(abb){
     title = name
@@ -54,7 +57,7 @@ genTitleName = function(type, name, year, month, abb){
     else{
       title = paste(title, year)
     }
-    if(length(month > 1)){
+    if(length(month) > 1){
       title = paste(title, month.abb[month[1]], "-", month.abb[month[length(month)]])
     }
     else{
@@ -101,12 +104,20 @@ Stocksummary = function(stock, name){
 #Function that print summary statistics of year or month and return the summary table
 StocksummarySpecific = function(stock, name, year = 2015:2018, month = 0){
   s <- FilterStock(stock, year, month)
+  
+  nyear = year[1]
+  title = ""
+  if(length(year) > 1){
+    nyear = paste(nyear, "-", year[length(year)])
+  }
+  
   if(all(month < 1) | all(month > 12)){
-    cat("Summary of the return of", name, "in", year, ":\n")
+    title = paste("Summary of the return of", name, "in", nyear, ":\n")
   }
   else{
-    cat("Summary of the return of", name, "in", year, month.name[month], ":\n")
+    title = paste("Summary of the return of", name, "in", nyear, month.name[month], ":\n")
   }
+  cat(title)
   s <- summary(na.omit(s$`Return of the Day`))
   cat("\n")
   return(s)
@@ -169,7 +180,7 @@ StockGraphCompareSeason = function(stock, name, year, month){
 StockHist = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
   s <- FilterStock(stock, year, month)
   title = genTitleName("Histogram", name, year, month, abb)
-  if(month == 0){
+  if(all(month == 0)){
     nbreak = 50
   }
   else{
@@ -187,12 +198,21 @@ StockHist = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
   return(h)
 }
 
+#Function that show histogram of the return month by month in whole year
 StockHistCompareAllMonth = function(stock, name, year = 2015:2018){
   if(pic){par(mfrow = c(4, 3))}
   for(i in year){
     for(j in 1:12){
       StockHist(stock, name, i, j, TRUE)
     }
+  }
+}
+
+#Function that compare the stocks seasonly by histogram
+StockHistCompareSeason = function(stock, name, year, month){
+  if(pic){par(mfrow = c(2, 1))}
+  for(i in year){
+    StockHist(stock, name, i, month, abb = TRUE)
   }
 }
 
@@ -248,7 +268,9 @@ StockBoxCompare = function(stock1, name1, stock2, name2, year = 2015:2018, month
   return(b)
 }
 
+#Function that plot scatter graph between two stocks
 StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, month = 0, abb = FALSE){
+  par(mfrow = c(1, 1))
   s <- FilterStock(stock1, year, month)
   s1 <- FilterStock(stock2, year, month)
   lim = c(min(s$`Return of the Day`, s1$`Return of the Day`, na.rm = TRUE), 
@@ -260,7 +282,7 @@ StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, m
     
   }
   else{
-    if(month < 1 | month > 12){
+    if(all(month < 1) | all(month > 12)){
       if(length(year) > 1){
         title = paste("Scatter Plot comapre from", year[1], "to", year[length(year)])
       }
@@ -278,6 +300,9 @@ StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, m
   }
   plot(s$`Return of the Day`, s1$`Return of the Day`, main = title, xlab = name1, ylab = name2,
        pch = 19, xlim = lim, ylim = lim)
+  if(reg){
+    abline(lm(formula = na.omit(s$`Return of the Day`) ~ na.omit(s1$`Return of the Day`)), col = "blue")
+  }
   if(!pic){
     dev.off()
     count <<- count + 1
@@ -285,6 +310,67 @@ StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, m
   return(cor(na.omit(s$`Return of the Day`), na.omit(s1$`Return of the Day`)))
 }
 
+#Function that plot histograms with normal comparison
+StockHistWithNormal = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
+  h <- StockHist(stock, name, year, month, abb)
+  s <- FilterStock(stock, year, month)
+  d <- na.omit(s$`Return of the Day`)
+  xfit <- seq(min(d), max(d), length = 100)
+  yfit <- dnorm(xfit, mean = mean(d), sd = sd(d))
+  print(yfit)
+  yfit <- yfit * diff(h$mids[1:2]) * length(d)
+  title = genTitleName("Histogram", name, year, month, abb)
+  if(!pic){
+    name = paste("fig", count, ".jpg", sep = "")
+    jpeg(name)
+  }
+  plot(h, xlab = "Return (£)", ylab = "Frequency")
+  lines(xfit, yfit, col="blue", lwd=2)
+  if(!pic){
+    dev.off()
+    count <<- count + 1
+  }
+  return(h)
+}
+
+#Function that carry out t-test
+StockTtest = function(stock, name, year = 2015:2017, tyear = 2018, month = 0, print = Isprint) {
+  fstock = FilterStock(stock, year, month)
+  tstock = FilterStock(stock, tyear, month)
+  
+  fmag = na.omit(sapply(fstock$`Return of the Day`, abs))
+  tmag = na.omit(sapply(tstock$`Return of the Day`, abs))
+  
+  title = ""
+  nyear = year[1]
+  if(length(year) > 1){
+    nyear = paste(nyear, "-", year[length(year)])
+  }
+  if(length(month) > 1){
+    title = paste("t-test of", name, nyear, "and", tyear, "during", month.name[month[1]], 
+                  "-", month.name[month[length(month)]])
+  }
+  else{
+    if(all(month < 1) | all(month > 12)){
+      title = paste("t-test of", name, nyear, "and", tyear)
+    }
+    else{
+      title = paste("t-test of", name, nyear, "and", tyear, "in", month.name[month])
+    }
+  }
+  
+  cat(title)
+  
+  test = t.test(tmag, fmag)
+  
+  if(print){
+    print(test)
+  }
+  
+  return(test)
+}
+
+#Main Function
 main = function(){
   #Get the stocks
   S1 = "GPC"
@@ -297,16 +383,8 @@ main = function(){
   #View(Stock2)
   
   #Get the summary statistics
-  cat("Summary of the return of", S1, "from 2015 to 2018:")
-  print(summary(na.omit(Stock1$`Return of the Day`)))
-  cat("\n")
-  cat("Summary of the return of", S2, "from 2015 to 2018:")
-  print(summary(na.omit(Stock2$`Return of the Day`)))
-  cat("\n\n")
-  
-  #Get the summary statistics year by year
-  Stocksummary(Stock1, S1)
-  Stocksummary(Stock2, S2)
+  StocksummarySpecific(Stock1, S1)
+  StocksummarySpecific(Stock1, S2)
 }
 
 #main()
