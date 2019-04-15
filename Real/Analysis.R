@@ -379,12 +379,10 @@ main = function(){
   Stock1 <- getStock(S1)
   Stock2 <- getStock(S2)
   
-  #View(Stock1)
-  #View(Stock2)
-  
-  #Get the summary statistics
   StocksummarySpecific(Stock1, S1)
-  StocksummarySpecific(Stock1, S2)
+  StocksummarySpecific(Stock2, S2)
+  
+  StockHistWithNormal(Stock1, S1)
 }
 
 #main()
