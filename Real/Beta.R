@@ -4,9 +4,10 @@
 # Target: GPC, HOG
 ####################################################
 
-savePic = TRUE
-SinkOut = TRUE
+savePic = FALSE
+SinkOut = FALSE
 count = 1
+mag = 3
 
 backtoDefault = function(){
   par(mfrow = c(1, 1))
@@ -241,6 +242,41 @@ StockBoxCompare = function(stock1, name1, stock2, name2, year = 2015:2018, month
   return(b)
 }
 
+StockGraph = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
+  s <- FilterStock(stock, year, month)
+  
+  title = genTitleName("Graph", name, year, month)
+  
+  SavePicSet()
+  
+  plot(x = s$Date, y = s$`Return of the Day`, type = "l", col = "blue",
+       xlab = "Date", ylab = "Return (£)", main = title)
+  lines(x = s$Date, y = rep(0, nrow(s)), col = "red")
+  
+  SavePicEnd()
+}
+
+StockGraphPredict = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
+  stock1 <- StockPredict(stock)
+  
+  s <- FilterStock(stock, year, month)
+  s1 <- FilterStock(stock1, year, month)
+  
+  View(s)
+  View(s1)
+  
+  title = genTitleName("Graph", name, year, month)
+  
+  SavePicSet()
+  
+  plot(x = s$Date, y = s$`Return of the Day`, type = "l", col = "blue",
+       xlab = "Date", ylab = "Return (£)", main = title)
+  lines(x = s$Date, y = s1$`Return of the Day`, col = "green")
+  lines(x = s$Date, y = rep(0, nrow(s)), col = "red")
+  
+  SavePicEnd()
+}
+
 StockScatterComapre = function(stock1, name1, stock2, name2, year = 2015:2018, month = 0, abb = FALSE, regression = TRUE){
   s <- FilterStock(stock1, year, month)
   s1 <- FilterStock(stock2, year, month)
@@ -276,8 +312,61 @@ StockTtest = function(stock, name, year = 2015:2017, tyear = 2018, month = 0) {
   
   cat(title)
   print(test)
+}
+
+StockPredict = function(stock){
+  r = stock$`Return of the Day`
+  r[1] = 0
+  r1 = r[-1]
+  r1 = append(r1, 0)
+  r2 = r1 - r
+  r2 = append(r2, 0, 0)
+  r2 = r2[-length(r2)]
+  r2 = r2 / mag
+  p = r2 + r
+  p = append(p, 0, 0)
+  p = p[-length(p)]
   
-  return(test)
+  result <- data.frame(stock$`Date`, p)
+  colnames(result) <- c("Date", "Return of the Day")
+  
+  return(result)
+}
+
+StockRealPredictSummary = function(stock, name){
+  pstock = StockPredict(stock)
+  
+  RealPred = data.frame(stock$`Return of the Day`, pstock$`Return of the Day`)
+  colnames(RealPred) = c("R", "P")
+  RealPos = subset(RealPred, R >= 0)
+  RealNeg = subset(RealPred, R < 0)
+  PosPos = subset(RealPos, P >= 0)
+  PosNeg = subset(RealPos, P < 0)
+  NegPos = subset(RealNeg, P >= 0)
+  NegNeg = subset(RealNeg, P < 0)
+  
+  S11 = nrow(PosPos)
+  S12 = nrow(PosNeg)
+  S21 = nrow(NegPos)
+  S22 = nrow(NegNeg)
+  
+  S13 = S11 + S12
+  S23 = S21 + S22
+  S31 = S11 + S21
+  S32 = S12 + S22
+  
+  S33 = S31 + S32
+  
+  S <- matrix(c(S11, S12, S13, S21, S22, S23, S31, S32, S33), ncol = 3, byrow = TRUE)
+  
+  colnames(S) <- c("Predict Positive", "Predict Negative", "Total")
+  rownames(S) <- c("Real Positive", "Real Negative", "Total")
+  
+  summary <- as.table(S)
+  
+  title = genTitleName("Predict and Real Summary Table", name, 2015:2018, 0)
+  cat(title, "\n")
+  print(summary)
 }
 
 main = function(){
@@ -301,6 +390,11 @@ main = function(){
   StockScatterComapre(Stock1, S1, Stock2, S2)
   
   StockTtest(Stock1, S1)
+  StockTtest(Stock1, S1, 2015)
+  StockTtest(Stock1, S1, 2016)
+  StockTtest(Stock1, S1, 2017)
+  
+  StockRealPredictSummary(Stock2, S2)
 }
 
 sinkSet()
