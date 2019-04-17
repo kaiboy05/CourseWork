@@ -178,7 +178,7 @@ StockHist = function(stock, name, year = 2015:2018, month = 0, abb = FALSE){
   
   SavePicSet()
   
-  h <- hist(s$`Return of the Day`, breaks = nbreak, xlab = "Return (£)", main = title)
+  h <- hist(s$`Return of the Day`, breaks = nbreak, xlab = "Return (£)", main = title, freq = FALSE)
   
   SavePicEnd()
   
@@ -194,13 +194,12 @@ StockHistWithNormal = function(stock, name, year = 2015:2018, month = 0, abb = F
   
   xfit <- seq(min(d), max(d), length = 100)
   yfit <- dnorm(xfit, mean = mean(d), sd = sd(d))
-  yfit <- yfit * diff(h$mids[1:2]) * length(d)
   
   title = genTitleName("Histogram", name, year, month, FALSE, abb)
   
   SavePicSet()
   
-  plot(h, xlab = "Return (£)", ylab = "Frequency")
+  plot(h, freq = FALSE, xlab = "Return (£)", ylab = "Density", main = title)
   lines(xfit, yfit, col="blue", lwd=2)
   
   SavePicEnd()
